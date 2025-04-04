@@ -2,6 +2,15 @@
 
 You can define an arbitrary number of hooks that subscribe to different events. The hook system is modular and different kind of hook types can be enabled.
 
+1. [Events](#events)
+2. Hook types
+ * [exec](#hook-type-exec)
+ * [githubrepo](#hook-type-githubrepo)
+ * [awssns](#hook-type-awssns)
+ * [slackdiff](#hook-type-slackdiff)
+ * [ciscosparkdiff](#ciscosparkdiff)
+ * [xmppdiff](#hook-type-xmppdiff)
+
 ## Configuration
 
 Following configuration keys need to be defined for all hooks:
@@ -184,6 +193,31 @@ hooks:
     privatekey: /root/.ssh/id_rsa
 ```
 
+### Custom branch name
+Githubrepo will use the branch name used in the
+[git output](Outputs.md#output-git) as a remote branch name. When creating the
+git repository for the first time, Oxidized uses the default branch name
+configured in git with `git config --global init.defaultBranch <Name>`. The
+default is `master`.
+
+If you need to rename the branch name after Oxidized has created it, you may do
+it manually. Be aware that you may break things. Make backups and do not
+complain if something goes wrong!
+
+1. Stop oxidized (no one should access the git repository while doing the
+following steps)
+2. Make a backup of your oxidized data, especially the git repository
+3. Change directory to your oxidized git repository (as configured in oxidized
+configuration file)
+4. Inspect the current branches with `git branch -avv`
+5. Rename the default branch with `git branch -m <NewName>`
+6. Remove the reference to the old remote branch  with
+   `git branch -r -d origin/<OldName>`
+6. Inspect the change with `git branch -avv`
+7. Restart oxidized - you're done!
+
+Note that you will also have to clean your remote git repository.
+
 ## Hook type: awssns
 
 The `awssns` hook publishes messages to AWS SNS topics. This allows you to notify other systems of device configuration changes, for example a config orchestration pipeline. Multiple services can subscribe to the same AWS topic.
@@ -225,13 +259,15 @@ gem install slack-ruby-client
 
 ### slackdiff hook configuration example
 
+> Please note that the channel needs to be your Slack channel ID.
+
 ```yaml
 hooks:
   slack:
     type: slackdiff
     events: [post_store]
     token: SLACK_BOT_TOKEN
-    channel: "#network-changes"
+    channel: "CHANNEL_ID"
 ```
 
 The token parameter is a Slack API token that can be generated following [this tutorial](https://api.slack.com/tutorials/tracks/getting-a-token).  Until Slack stops supporting them, legacy tokens can also be used.
@@ -244,12 +280,10 @@ hooks:
     type: slackdiff
     events: [post_store]
     token: SLACK_BOT_TOKEN
-    channel: "#network-changes"
+    channel: "CHANNEL_ID"
     diff: false
     message: "%{node} %{group} %{model} updated https://git.intranet/network-changes/commit/%{commitref}"
 ```
-
-Note the channel name must be in quotes.
 
 A proxy can optionally be specified if needed to reach the Slack API endpoint.
 
@@ -259,7 +293,7 @@ hooks:
     type: slackdiff
     events: [post_store]
     token: SLACK_BOT_TOKEN
-    channel: "#network-changes"
+    channel: "#CHANNEL_ID"
     proxy: http://myproxy:8080
 ```
 

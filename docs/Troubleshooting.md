@@ -1,4 +1,9 @@
 # Troubleshooting
+## Table of contents
+1. [Connects but no/partial configuration collected](#oxidized-connects-to-a-supported-device-but-no-or-partial-configuration-is-collected)
+2. [No push to remote git repository](#oxidized-does-not-push-to-a-remote-git-repository-hook-githubrepo)
+3. [Git performance issues with large device counts](#git-performance-issues-with-large-device-counts)
+4. [Oxidized ignores the changes I made to its git repository](#oxidized-ignores-the-changes-i-made-to-its-git-repository)
 
 ## Oxidized connects to a supported device but no (or partial) configuration is collected
 
@@ -64,3 +69,54 @@ Compare the output to the partial output collected by Oxidized, focusing on the 
 Adapt the prompt regexp to be more conservative if necessary in a local model override file.
 
 *We encourage you to submit a PR for any prompt issues you encounter.*
+
+## Oxidized does not push to a remote Git repository (hook githubrepo)
+See Issue #2753
+
+You need to store the public SSH keys of the remote Git server to the ~/.ssh/known_hosts
+of the user running oxidized.
+
+This can be done with
+```shell
+ssh-keyscan gitserver.git.com >> ~/.ssh/known_hosts
+```
+
+If you are running oxidized in a container, you need to map /home/oxidized/.ssh in the
+container to a local repository and save the known_hosts in the local repository. You can
+find an example how to do this under [examples/podman-compose](/examples/podman-compose/)
+
+## Git performance issues with large device counts
+When you use git to store your configurations, the size of your repository will
+grow over time. This growth can lead to performance issues. To resolve these
+issues, you should perform a Git garbage collection on your repository.
+
+Follow these steps to do so:
+
+1. Stop oxidized (no one should access the git repository while running garbage collection)
+2. Make a backup of your oxidized data, especially the Git repository
+3. Change directory your oxidized git repository (as configured in oxidized configuration file)
+4. Execute the command `git gc` to run the garbage collection
+5. Restart oxidized - you're done!
+
+Note that slow performance in oxidized-web when listing the versions of a device
+are due to the necessity to go through the whole git log to search the
+history. See Issue #3121, the fix will come with oxidized version 0.33.0.
+
+## Oxidized ignores the changes I made to its git repository
+First of all: you shouldn't manipulate the git repository of oxidized. Don't
+create it, don't modify it, leave it alone. You can break things. You have
+been warned.
+
+In some situations, you may need to make changes to the git repository of
+oxidized. Stop oxidized, make backups, and be sure you know exactly what you
+are doing. You have been warned.
+
+If you simply clone the git repository, make changes and push them, oxidized
+will ignore these modifications. This is because oxidized caches the HEAD tree
+in the index and `git push` does not update the index because the repository is
+a bare repo and not a working directory repository.
+
+So, you have to update the index manually. For this, go into oxidized repo, and
+run `git ls-tree -r HEAD | git update-index --index-info`. While you're at it,
+consider running `git gc`, as oxidized cannot garbage collect the repo (this
+is not supported in [Rugged](https://github.com/libgit2/rugged)).

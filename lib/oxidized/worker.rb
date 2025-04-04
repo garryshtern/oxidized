@@ -33,7 +33,10 @@ module Oxidized
         Oxidized.logger.debug "lib/oxidized/worker.rb: Added #{node.group}/#{node.name} to the job queue"
       end
 
-      run_done_hook if cycle_finished?
+      if cycle_finished?
+        run_done_hook
+        exit 0 if Oxidized.config.run_once
+      end
       Oxidized.logger.debug("lib/oxidized/worker.rb: #{@jobs.size} jobs running in parallel") unless @jobs.empty?
     end
 
@@ -50,6 +53,10 @@ module Oxidized
       end
     rescue NodeNotFound
       Oxidized.logger.warn "#{node.group}/#{node.name} not found, removed while collecting?"
+    end
+
+    def reload
+      @nodes.load
     end
 
     private
@@ -94,11 +101,8 @@ module Oxidized
     end
 
     def cycle_finished?
-      if @jobs_done > @nodes.count
-        true
-      else
-        @jobs_done.positive? && (@jobs_done % @nodes.count).zero?
-      end
+      @jobs_done > @nodes.count ||
+        (@jobs_done.positive? && (@jobs_done % @nodes.count).zero?)
     end
 
     def run_done_hook

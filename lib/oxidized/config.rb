@@ -15,7 +15,11 @@ module Oxidized
     SLEEP      = 1
 
     def self.load(cmd_opts = {})
-      asetus = Asetus.new(name: 'oxidized', load: false, key_to_s: true, usrdir: Oxidized::Config::ROOT)
+      usrdir = File.expand_path(cmd_opts[:home_dir] || Oxidized::Config::ROOT)
+      cfgfile = cmd_opts[:config_file] || 'config'
+      # configuration file with full path as a class instance variable
+      @configfile = File.join(usrdir, cfgfile)
+      asetus = Asetus.new(name: 'oxidized', load: false, usrdir: usrdir, cfgfile: cfgfile)
       Oxidized.asetus = asetus
 
       asetus.default.username      = 'username'
@@ -25,18 +29,21 @@ module Oxidized
       asetus.default.interval      = 3600
       asetus.default.use_syslog    = false
       asetus.default.debug         = false
+      asetus.default.run_once      = false
       asetus.default.threads       = 30
       asetus.default.use_max_threads = false
       asetus.default.timeout       = 20
       asetus.default.retries       = 3
       asetus.default.prompt        = /^([\w.@-]+[#>]\s?)$/
-      asetus.default.rest          = '127.0.0.1:8888' # or false to disable
       asetus.default.next_adds_job = false            # if true, /next adds job, so device is fetched immmeiately
       asetus.default.vars          = {}               # could be 'enable'=>'enablePW'
       asetus.default.groups        = {}               # group level configuration
       asetus.default.group_map     = {}               # map aliases of groups to names
       asetus.default.models        = {}               # model level configuration
       asetus.default.pid           = File.join(Oxidized::Config::ROOT, 'pid')
+
+      # Extentions
+      asetus.default.extensions['oxidized-web'].load = false
 
       asetus.default.crash.directory = File.join(Oxidized::Config::ROOT, 'crashes')
       asetus.default.crash.hostnames = false
@@ -62,12 +69,16 @@ module Oxidized
         raise InvalidConfig, "Error loading config: #{e.message}"
       end
 
-      raise NoConfig, 'edit ~/.config/oxidized/config' if asetus.create
+      raise NoConfig, "edit #{@configfile}" if asetus.create
 
       # override if comand line flag given
       asetus.cfg.debug = cmd_opts[:debug] if cmd_opts[:debug]
 
       asetus
+    end
+
+    class << self
+      attr_reader :configfile
     end
   end
 

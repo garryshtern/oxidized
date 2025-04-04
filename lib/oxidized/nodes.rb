@@ -61,6 +61,9 @@ module Oxidized
       end
     end
 
+    # Returns the configuration of group/node_name
+    #
+    # #fetch is called by oxidzed-web
     def fetch(node_name, group)
       yield_node_output(node_name) do |node, output|
         output.fetch node, group
@@ -69,7 +72,7 @@ module Oxidized
 
     # @param node [String] name of the node moved into the head of array
     def next(node, opt = {})
-      return unless waiting.find_node_index(node)
+      return if running.find_index(node)
 
       with_lock do
         n = del node
@@ -98,6 +101,9 @@ module Oxidized
       find_index(node) || raise(NodeNotFound, "unable to find '#{node}'")
     end
 
+    # Returns all stored versions of group/node_name
+    #
+    # Called by oxidized-web
     def version(node_name, group)
       yield_node_output(node_name) do |node, output|
         output.version node, group
@@ -116,6 +122,10 @@ module Oxidized
       end
     end
 
+    def find_index(node)
+      index { |e| [e.name, e.ip].include? node }
+    end
+
     private
 
     def initialize(opts = {})
@@ -131,10 +141,6 @@ module Oxidized
 
     def with_lock(...)
       @mutex.synchronize(...)
-    end
-
-    def find_index(node)
-      index { |e| [e.name, e.ip].include? node }
     end
 
     # @param node node which is removed from nodes list
@@ -179,6 +185,8 @@ module Oxidized
     def yield_node_output(node_name)
       with_lock do
         node = find { |n| n.name == node_name }
+        raise(NodeNotFound, "unable to find '#{node_name}'") if node.nil?
+
         output = node.output.new
         raise NotSupported unless output.respond_to? :fetch
 

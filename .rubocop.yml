@@ -1,9 +1,13 @@
 inherit_from: .rubocop_todo.yml
 
-# Do not attempt to police vendored code
+plugins:
+  - rubocop-rake
+  - rubocop-minitest
+  - rubocop-sequel
+
 AllCops:
   NewCops: enable
-  TargetRubyVersion: 3.0
+  # Do not attempt to police vendored code
   Exclude:
     - 'vendor/**/*'
 
@@ -19,8 +23,12 @@ Style/FrozenStringLiteralComment:
 Layout/LineLength:
   Enabled: false
 
+# We do not enforce the cop in the models as it would not work with the
+# DSL style of the models
 Lint/AmbiguousRegexpLiteral:
-  Enabled: false
+  Enabled: true
+  Exclude:
+   - lib/oxidized/model/*.rb
 
 Lint/RaiseException:
   Enabled: true
@@ -52,11 +60,18 @@ Style/FormatStringToken:
 Style/HashEachMethods:
   Enabled: true
 
+Style/HashSyntax:
+  EnforcedShorthandSyntax: either
+
 Style/HashTransformKeys:
   Enabled: true
 
 Style/HashTransformValues:
   Enabled: true
+
+Style/RegexpLiteral:
+  EnforcedStyle: slashes
+  AllowInnerSlashes: true
 
 Style/RescueModifier:
   Enabled: false
@@ -71,10 +86,10 @@ Style/ParallelAssignment:
   Enabled: false
 
 Metrics/MethodLength:
-  Max: 45
+  Max: 50
 
-## Metrics/AbcSize:
-##   Max: 28
+Metrics/AbcSize:
+  Max: 28
 
 Metrics/ClassLength:
   Max: 200
@@ -82,15 +97,15 @@ Metrics/ClassLength:
 ## Metrics/CyclomaticComplexity:
 ##   Max: 7
 
+# The BlockLength metric does not apply to unit tests. They are in nature
+# long and not very pretty
 Metrics/BlockLength:
   Max: 150
+  Exclude:
+   - spec/**/*_spec.rb
 
 Metrics/ParameterLists:
   Max: 6
 
 Lint/EmptyBlock:
   Enabled: false
-
-require:
-  - rubocop-rake
-  - rubocop-minitest

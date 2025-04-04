@@ -27,23 +27,30 @@ class IOS < Oxidized::Model
 
   cmd :secret do |cfg|
     cfg.gsub! /^(snmp-server community).*/, '\\1 <configuration removed>'
-    cfg.gsub! /^(snmp-server host \S+( vrf \S+)?( informs?)?( version (1|2c|3 (noauth|auth|priv)))?)\s+\S+((\s+\S*)*)\s*/, '\\1 <secret hidden> \\7'
+    cfg.gsub! /^(snmp-server host \S+( vrf \S+)?( informs?)?( version (1|2c))?) +\S+( .*)?$*/, '\\1 <secret hidden>\\6'
     cfg.gsub! /^(username .+ (password|secret) \d) .+/, '\\1 <secret hidden>'
     cfg.gsub! /^(enable (password|secret)( level \d+)? \d) .+/, '\\1 <secret hidden>'
-    cfg.gsub! /^(\s+(?:password|secret)) (?:\d )?\S+/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +(?:password|secret)) (?:\d )?\S+/, '\\1 <secret hidden>'
     cfg.gsub! /^(.*wpa-psk ascii \d) (\S+)/, '\\1 <secret hidden>'
     cfg.gsub! /^(.*key 7) (\d.+)/, '\\1 <secret hidden>'
     cfg.gsub! /^(tacacs-server (.+ )?key) .+/, '\\1 <secret hidden>'
     cfg.gsub! /^(crypto isakmp key) (\S+) (.*)/, '\\1 <secret hidden> \\3'
-    cfg.gsub! /^(\s+ip ospf message-digest-key \d+ md5) .+/, '\\1 <secret hidden>'
-    cfg.gsub! /^(\s+ip ospf authentication-key) .+/, '\\1 <secret hidden>'
-    cfg.gsub! /^(\s+neighbor \S+ password) .+/, '\\1 <secret hidden>'
-    cfg.gsub! /^(\s+vrrp \d+ authentication text) .+/, '\\1 <secret hidden>'
-    cfg.gsub! /^(\s+standby \d+ authentication) .{1,8}$/, '\\1 <secret hidden>'
-    cfg.gsub! /^(\s+standby \d+ authentication md5 key-string) .+?( timeout \d+)?$/, '\\1 <secret hidden> \\2'
-    cfg.gsub! /^(\s+key-string) .+/, '\\1 <secret hidden>'
-    cfg.gsub! /^((tacacs|radius) server [^\n]+\n(\s+[^\n]+\n)*\s+key) [^\n]+$/m, '\1 <secret hidden>'
-    cfg.gsub! /^(\s+ppp (chap|pap) password \d) .+/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +ip ospf message-digest-key \d+ md5) .+/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +ip ospf authentication-key) .+/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +neighbor \S+ password) .+/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +vrrp \d+ authentication text) .+/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +standby \d+ authentication) .{1,8}$/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +standby \d+ authentication md5 key-string) .+?( timeout \d+)?$/, '\\1 <secret hidden> \\2'
+    cfg.gsub! /^( +key-string) .+/, '\\1 <secret hidden>'
+    cfg.gsub! /^((tacacs|radius) server [^\n]+\n( +[^\n]+\n)* +key) [^\n]+$/m, '\1 <secret hidden>'
+    cfg.gsub! /^( +ppp (chap|pap) password \d) .+/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +security wpa psk set-key (?:ascii|hex) \d) (.*)$/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +dot1x username \S+ password \d) (.*)$/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +mgmtuser username \S+ password \d) (.*) (secret \d) (.*)$/, '\\1 <secret hidden> \\3 <secret hidden>'
+    cfg.gsub! /^( +client \S+ server-key \d) (.*)$/, '\\1 <secret hidden>'
+    cfg.gsub! /^( +domain-password) \S+ ?(.*)/, '\\1 <secret hidden> \\2'
+    cfg.gsub! /^( +pre-shared-key).*/, '\\1 <configuration removed>'
+    cfg.gsub! /^(.*server-key(?: \d)?) \S+/, '\\1 <secret hidden>'
     cfg
   end
 
@@ -74,7 +81,7 @@ class IOS < Oxidized::Model
 
       comments << "Memory: pcmcia #{Regexp.last_match(2)} #{Regexp.last_match(3)}#{Regexp.last_match(4)} #{Regexp.last_match(1)}" if line =~ /^(\d+[kK]) bytes of (Flash|ATA)?.*PCMCIA .*(slot|disk) ?(\d)/i
 
-      if line =~ /(\S+(?:\sseries)?)\s+(?:\((\S+)\)\s+processor|\(revision[^)]+\)).*\s+with (\S+k) bytes/i
+      if line =~ /(\S+(?:\sseries)?)\s+(?:\(([\S ]+)\)\s+processor|\(revision[^)]+\)).*\s+with (\S+k) bytes/i
         sproc = Regexp.last_match(1)
         cpu = Regexp.last_match(2)
         mem = Regexp.last_match(3)
@@ -118,6 +125,8 @@ class IOS < Oxidized::Model
       cfg.gsub! /^ tunnel mpls traffic-eng bandwidth[^\n]*\n*(
                     (?: [^\n]*\n*)*
                     tunnel mpls traffic-eng auto-bw)/mx, '\1'
+      # get rid of values of custom SNMP OID's
+      cfg.gsub! /^(\s+expression) \d+$/, '\\1 <value removed>'
       cfg
     end
   end
